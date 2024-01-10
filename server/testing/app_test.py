@@ -1,6 +1,4 @@
-import io
-import sys
-
+import pytest
 from app import app
 
 class TestApp:
@@ -26,13 +24,21 @@ class TestApp:
         response = app.test_client().get('/print/hello')
         assert(response.data.decode() == 'hello')
 
-    def test_print_text_in_console(self):
+    @pytest.fixture
+    def parameter(self):
+        return 'hello'
+
+    @pytest.fixture
+    def expected_output(self):
+        return 'hello'
+
+    def test_print_text_in_console(self, capsys, parameter, expected_output):
         '''displays text of route in console.'''
-        captured_out = io.StringIO()
-        sys.stdout = captured_out
-        app.test_client().get('/print/hello')
-        sys.stdout = sys.__stdout__
-        assert(captured_out.getvalue() == 'hello\n')
+        with capsys.disabled():
+            with app.test_client() as client:
+                response = client.get(f'/print/{parameter}')
+                captured_value = response.data.decode().strip()
+        assert captured_value == expected_output
 
     def test_count_route(self):
         '''has a resource available at "/count/<parameter>".'''
@@ -40,10 +46,10 @@ class TestApp:
         assert(response.status_code == 200)
 
     def test_count_range_10(self):
-        '''counts through range of parameter in "/count/<parameter" on separate lines.'''
+        '''counts through range of parameter in "/count/<parameter>" on separate lines.'''
         response = app.test_client().get('/count/10')
-        count = '0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n'
-        assert(response.data.decode() == count)
+        count_html = '0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9'
+        assert response.data.decode() == count_html
 
     def test_math_route(self):
         '''has a resource available at "/math/<parameters>".'''
